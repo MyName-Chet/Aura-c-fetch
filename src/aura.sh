@@ -1,5 +1,5 @@
 #!/bin/bash
-# Aura-c-fetch Core Script (Smart Resize Fix)
+# Aura-c-fetch Core Script (Compact & Smart Fit)
 # Author: Oatsadawut Phansalee (MyName-Chet)
 
 # --- CONFIGURATION ---
@@ -29,11 +29,19 @@ get_gpu() {
     else echo "Integrated/Unknown"; fi
 }
 
+# ฟังก์ชันย่อชื่อ CPU (หัวใจสำคัญของการประหยัดที่)
+get_cpu_short() {
+    raw_cpu=$(lscpu | grep 'Model name' | cut -f 2 -d ":" | sed 's/^[ \t]*//')
+    # ลบคำฟุ่มเฟือยออก (Intel(R) Core(TM) etc.)
+    echo "$raw_cpu" | sed -e 's/(R)//g' -e 's/(TM)//g' -e 's/CPU @.*//g' -e 's/1[0-9]th Gen //g' -e 's/Intel Core//g' | xargs
+}
+
 OS=$(get_os)
 KERNEL=$(uname -r)
 UPTIME=$(uptime -p | sed 's/up //')
 SHELL_NAME=${SHELL##*/}
-CPU=$(lscpu | grep 'Model name' | cut -f 2 -d ":" | sed 's/^[ \t]*//')
+# เรียกใช้ CPU แบบย่อ
+CPU=$(get_cpu_short) 
 MEM=$(free -h | awk '/Mem:/ { print $3 " / " $2 }')
 DISK=$(df -h / | awk 'NR==2 { print $3 " / " $2 }')
 GPU=$(get_gpu)
@@ -62,30 +70,28 @@ draw_loading_bar() {
     echo -e "\e[1;32m${FULL_BLOCK} READY\e[0m"
 }
 
-# --- SMART LAYOUT CALCULATION (หัวใจหลักของรอบนี้) ---
-# ความยาวข้อความที่ต้องใช้แน่ๆ (CPU Intel Gen 13 ยาวประมาณ 50-55 ตัวอักษร)
-TEXT_REQ=55
+# --- LAYOUT CALCULATION (ปรับสูตรให้รับจอ 80 ช่องได้) ---
+# ความยาวข้อความลดลงแล้ว (CPU สั้นลง)
+TEXT_REQ=40 
 PADDING=4
 
-# พื้นที่ที่เหลือให้รูปภาพ = ความกว้างจอ - พื้นที่ข้อความ
 AVAILABLE_SPACE=$((TERM_COLS - TEXT_REQ - PADDING))
 
-# ตัดสินใจเลือกโหมด
-if [ "$AVAILABLE_SPACE" -ge 42 ]; then
-    # จอกว้างมาก -> รูปใหญ่เต็มตา
+if [ "$AVAILABLE_SPACE" -ge 40 ]; then
+    # จอใหญ่ (Wide) -> รูปใหญ่
     LAYOUT_MODE="DESKTOP_BIG"
-    IMG_SIZE=42
-elif [ "$AVAILABLE_SPACE" -ge 28 ]; then
-    # จอกลางๆ -> รูปย่อมลงมาหน่อย (แต่ยังอยู่ซ้ายขวาได้!)
-    LAYOUT_MODE="DESKTOP_SMALL"
-    IMG_SIZE=28  # ขนาดรูปที่ลดลงเพื่อให้พอดีจอ
+    IMG_SIZE=40
+elif [ "$AVAILABLE_SPACE" -ge 24 ]; then
+    # จอมาตรฐาน (Standard 80 cols) -> รูปกลาง (24-28)
+    LAYOUT_MODE="DESKTOP_STD"
+    IMG_SIZE=26 
 else
-    # จอเล็กไป -> ไปแนวตั้ง
+    # จอเล็กจริง (ต่ำกว่า 75 ช่อง) -> ไปแนวตั้ง
     LAYOUT_MODE="MOBILE"
 fi
 
 if [ "$LAYOUT_MODE" != "MOBILE" ]; then
-    # >>> DESKTOP MODE (Side-by-Side) <<<
+    # >>> DESKTOP MODE <<<
     if command -v chafa &> /dev/null && [ -n "$IMG_PATH" ]; then
         RAW_IMG=$(chafa "$IMG_PATH" --size "${IMG_SIZE}x${IMG_SIZE}")
     else
@@ -95,13 +101,12 @@ if [ "$LAYOUT_MODE" != "MOBILE" ]; then
     echo "$RAW_IMG"
     tput cuu "$((IMG_H - 1))" 
     
-    # คำนวณ Offset ตามขนาดรูปจริง
     OFFSET=$((IMG_SIZE + PADDING))
     p() { tput cuf "$OFFSET"; echo -e "$1"; }
     PAD=$OFFSET; BAR_MAX=30
 
 else
-    # >>> MOBILE MODE (Vertical) <<<
+    # >>> MOBILE MODE <<<
     if command -v chafa &> /dev/null && [ -n "$IMG_PATH" ]; then
         IMG_SAFE_W=$((TERM_COLS - 4))
         [ $IMG_SAFE_W -gt 40 ] && IMG_SAFE_W=40
@@ -110,7 +115,7 @@ else
     echo "" 
     p() { echo -e " $1"; }
     PAD=0; BAR_MAX=$TERM_COLS
-    IMG_H=20 # ค่าสมมติสำหรับ cleanup
+    IMG_H=20
 fi
 
 # =========================
@@ -137,7 +142,6 @@ p ""
 
 draw_loading_bar "$PAD" "$BAR_MAX"
 
-# Cleanup cursor position
 if [ "$LAYOUT_MODE" != "MOBILE" ]; then
     USED_LINES=18
     REM=$((IMG_H - USED_LINES))
