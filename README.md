@@ -6,8 +6,9 @@ Aura-c-fetch is a high-performance, responsive system fetch tool designed for Li
 ## ✨ Features
 - **Responsive Layout:** Automatically switches between Desktop (Landscape) and Mobile (Portrait) modes based on terminal size.
 - **Cyberpunk Animation:** Cool loading bar animation with status indicators.
-- **Smart Detection:** accurate GPU detection (Nvidia, AMD, Intel) and Distro fallback logic.
+- **Smart Detection:** Accurate GPU detection (Nvidia, AMD, Intel) and Distro fallback logic.
 - **Fast:** Optimized data fetching logic for instant startup.
+- **System-wide Access:** Install once, run from anywhere.
 
 ## 📦 Installation
 
@@ -21,6 +22,12 @@ Aura-c-fetch is a high-performance, responsive system fetch tool designed for Li
     chmod +x install.sh
     ./install.sh
 
-3. Run the tool
+3. Usage: Restart your terminal or simply run
     ```bash
-    ./src/aura.sh
+    aura
+
+## 🗑️ Uninstallation
+
+1. To remove the tool and clean up system files
+    chmod +x uninstall.sh
+    ./uninstall.sh

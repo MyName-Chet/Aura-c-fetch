@@ -1,18 +1,28 @@
 #!/bin/bash
-# Aura-c-fetch Core Script (Ultimate Responsive & Fast)
+# Aura-c-fetch Core Script (System-wide Compatible)
 
 # --- CONFIGURATION ---
-IMG_PATH="$(dirname "$0")/../assets/logo.jpg"
-ANIM_SPEED=0.03       # เร็วขึ้นอีกนิด
-MOBILE_THRESHOLD=80   # ถ้าจอกว้างน้อยกว่านี้ จะเปลี่ยนเป็นแนวตั้งทันที
+# ระบบค้นหาที่ตั้งรูปภาพ (Auto-Detect Image Path)
+# 1. เช็คแบบ Local (เวลาเทสในโฟลเดอร์)
+if [ -f "$(dirname "$0")/../assets/logo.jpg" ]; then
+    IMG_PATH="$(dirname "$0")/../assets/logo.jpg"
+# 2. เช็คแบบ System Install (เวลาย้ายไปลงเครื่องแล้ว)
+elif [ -f "/usr/local/share/aura-c-fetch/logo.jpg" ]; then
+    IMG_PATH="/usr/local/share/aura-c-fetch/logo.jpg"
+else
+    IMG_PATH=""
+fi
+
+ANIM_SPEED=0.03       
+MOBILE_THRESHOLD=80   
 # ---------------------
 
-# 1. เช็คขนาดหน้าจอปัจจุบันก่อนเลย (หัวใจของความ Responsive)
+# 1. เช็คขนาดหน้าจอ
 TERM_COLS=$(tput cols)
 TERM_LINES=$(tput lines)
 
 # =========================================
-#  ZONE: GATHER DATA (รวบรวมข้อมูลให้เสร็จก่อนวาด จะได้เร็ว)
+#  ZONE: GATHER DATA
 # =========================================
 
 get_os() {
@@ -27,7 +37,6 @@ get_gpu() {
     else echo "Integrated/Unknown"; fi
 }
 
-# เก็บใส่ตัวแปรให้หมด (Cache ไว้)
 OS=$(get_os)
 KERNEL=$(uname -r)
 UPTIME=$(uptime -p | sed 's/up //')
@@ -38,28 +47,20 @@ DISK=$(df -h / | awk 'NR==2 { print $3 " / " $2 }')
 GPU=$(get_gpu)
 
 # =========================================
-#  ZONE: RENDER ENGINE (คำนวณการวาด)
+#  ZONE: RENDER ENGINE
 # =========================================
 
 clear
-tput civis # ซ่อน Cursor
+tput civis 
 
-# ฟังก์ชันวาดบาร์โหลด (ใช้ได้ทั้งแนวตั้งและแนวนอน)
 draw_loading_bar() {
     local pad_left=$1
     local max_width=$2
     
-    # คำนวณความกว้างบาร์ (ไม่ให้ทะลุจอ)
-    # ถ้าจอเล็ก ให้ใช้ความกว้างจอ - 10, ถ้าจอใหญ่ fix ไว้ 30
-    if [ "$max_width" -lt 40 ]; then
-        BAR_W=$((max_width - 5))
-    else
-        BAR_W=30
-    fi
-    
-    [ $BAR_W -lt 5 ] && BAR_W=5 # กันบั๊กบาร์เล็กเกิน
+    if [ "$max_width" -lt 40 ]; then BAR_W=$((max_width - 5)); else BAR_W=30; fi
+    [ $BAR_W -lt 5 ] && BAR_W=5
 
-    for ((i=0; i<=BAR_W; i+=2)); do # เพิ่มทีละ 2 เพื่อความเร็ว
+    for ((i=0; i<=BAR_W; i+=2)); do
         PERCENT=$(( i * 100 / BAR_W ))
         FULL=$(printf "%0.s█" $(seq 1 $i))
         EMPTY=$(printf "%0.s░" $(seq 1 $((BAR_W - i))))
@@ -70,61 +71,45 @@ draw_loading_bar() {
         sleep $ANIM_SPEED
     done
     
-    # Finish State
     tput cr
     [ "$pad_left" -gt 0 ] && tput cuf "$pad_left"
     FULL_BLOCK=$(printf "%0.s█" $(seq 1 $BAR_W))
     echo -e "\e[1;32m${FULL_BLOCK} READY\e[0m"
 }
 
-# --- DECISION LOGIC: เลือก Layout ---
-
 if [ "$TERM_COLS" -lt "$MOBILE_THRESHOLD" ]; then
-    # >>> MOBILE / PORTRAIT MODE (แนวตั้ง) <<<
-    # วาดรูปไว้ข้างบน เต็มความกว้าง
-    if command -v chafa &> /dev/null; then
+    # >>> MOBILE MODE <<<
+    if command -v chafa &> /dev/null && [ -n "$IMG_PATH" ]; then
         chafa "$IMG_PATH" --size "${TERM_COLS}x20" --align center
     fi
-    echo "" # เว้นบรรทัด
-    
-    # ฟังก์ชันพิมพ์แบบชิดซ้ายปกติ
+    echo "" 
     p() { echo -e " $1"; }
-    
-    PAD=0 # ไม่ต้องดันขวา
+    PAD=0 
     BAR_MAX=$TERM_COLS
-
 else
-    # >>> DESKTOP / LANDSCAPE MODE (แนวนอน) <<<
-    # คำนวณขนาดรูป Dynamic (1/3 ของจอ แต่ไม่เกิน 40 ช่อง)
+    # >>> DESKTOP MODE <<<
     IMG_W=$((TERM_COLS / 3))
     [ $IMG_W -gt 42 ] && IMG_W=42
-    [ $IMG_W -lt 20 ] && IMG_W=20 # กันเล็กเกิน
+    [ $IMG_W -lt 20 ] && IMG_W=20 
     
-    if command -v chafa &> /dev/null; then
+    if command -v chafa &> /dev/null && [ -n "$IMG_PATH" ]; then
         RAW_IMG=$(chafa "$IMG_PATH" --size "${IMG_W}x${IMG_W}")
     else
         RAW_IMG="[No Image]"
     fi
     
     IMG_H=$(echo "$RAW_IMG" | wc -l)
-    
     echo "$RAW_IMG"
-    tput cuu "$((IMG_H - 1))" # ดึงเคอร์เซอร์กลับ
+    tput cuu "$((IMG_H - 1))" 
     
     OFFSET=$((IMG_W + 4))
-    
-    # ฟังก์ชันพิมพ์แบบดันขวา
-    p() { 
-        tput cuf "$OFFSET"
-        echo -e "$1" 
-    }
-    
+    p() { tput cuf "$OFFSET"; echo -e "$1"; }
     PAD=$OFFSET
     BAR_MAX=30
 fi
 
 # =========================================
-#  ZONE: DISPLAY (แสดงผลจริง)
+#  ZONE: DISPLAY
 # =========================================
 
 p "\e[1;36mSYSTEM IDENTITY\e[0m"
@@ -146,12 +131,9 @@ p ""
 p "\e[41m  \e[0m \e[42m  \e[0m \e[43m  \e[0m \e[44m  \e[0m \e[45m  \e[0m \e[46m  \e[0m \e[47m  \e[0m"
 p ""
 
-# เรียก Animation (ส่งค่าระยะห่างซ้ายไป)
 draw_loading_bar "$PAD" "$BAR_MAX"
 
-# Cleanup (ดันบรรทัดทิ้งท้าย)
 if [ "$TERM_COLS" -ge "$MOBILE_THRESHOLD" ]; then
-    # ถ้าโหมด Desktop ต้องคำนวณบรรทัดที่เหลือ
     USED_LINES=18
     REM=$((IMG_H - USED_LINES))
     if [ $REM -gt 0 ]; then
@@ -159,5 +141,5 @@ if [ "$TERM_COLS" -ge "$MOBILE_THRESHOLD" ]; then
     fi
 fi
 
-tput cnorm # คืนชีพ Cursor
+tput cnorm
 echo -e "\n"
