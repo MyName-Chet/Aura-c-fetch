@@ -1,5 +1,5 @@
 #!/bin/bash
-# Aura-c-fetch Core Script (Horizontal Resize Fix)
+# Aura-c-fetch Core Script (Smart Resize Fix)
 # Author: Oatsadawut Phansalee (MyName-Chet)
 
 # --- CONFIGURATION ---
@@ -62,34 +62,32 @@ draw_loading_bar() {
     echo -e "\e[1;32m${FULL_BLOCK} READY\e[0m"
 }
 
-# --- SMART LAYOUT CALCULATION (แก้จุดบั๊กตรงนี้) ---
-# 1. คำนวณความยาวของข้อความที่ยาวที่สุด (CPU/GPU มักจะยาวสุด)
-# ผมเผื่อไว้ 60 ตัวอักษร เพราะชื่อ CPU Intel Gen 13 มันยาว
-MAX_TEXT_LEN=60 
-IMG_WIDTH=42
+# --- SMART LAYOUT CALCULATION (หัวใจหลักของรอบนี้) ---
+# ความยาวข้อความที่ต้องใช้แน่ๆ (CPU Intel Gen 13 ยาวประมาณ 50-55 ตัวอักษร)
+TEXT_REQ=55
 PADDING=4
 
-# 2. พื้นที่ที่ต้องใช้ทั้งหมด (Required Space)
-REQUIRED_WIDTH=$(( IMG_WIDTH + MAX_TEXT_LEN + PADDING ))
+# พื้นที่ที่เหลือให้รูปภาพ = ความกว้างจอ - พื้นที่ข้อความ
+AVAILABLE_SPACE=$((TERM_COLS - TEXT_REQ - PADDING))
 
-# 3. เงื่อนไขการตัดสินใจ (Decision Logic)
-# ถ้าจอเล็กกว่าที่ต้องการ หรือ เล็กกว่า 100 ช่อง -> บังคับ Mobile Mode ทันที
-if [ "$TERM_COLS" -lt "$REQUIRED_WIDTH" ] || [ "$TERM_COLS" -lt 105 ]; then
-    # >>> MOBILE MODE (Vertical) <<<
-    # วาดรูปไว้บน (ลดขนาดรูปลงหน่อยเพื่อให้พอดี)
-    if command -v chafa &> /dev/null && [ -n "$IMG_PATH" ]; then
-        # ใช้ความกว้างจอ - 4 เพื่อความปลอดภัย
-        IMG_SAFE_W=$((TERM_COLS - 4))
-        [ $IMG_SAFE_W -gt 40 ] && IMG_SAFE_W=40
-        chafa "$IMG_PATH" --size "${IMG_SAFE_W}x20" --align center
-    fi
-    echo "" 
-    p() { echo -e " $1"; }
-    PAD=0; BAR_MAX=$TERM_COLS
+# ตัดสินใจเลือกโหมด
+if [ "$AVAILABLE_SPACE" -ge 42 ]; then
+    # จอกว้างมาก -> รูปใหญ่เต็มตา
+    LAYOUT_MODE="DESKTOP_BIG"
+    IMG_SIZE=42
+elif [ "$AVAILABLE_SPACE" -ge 28 ]; then
+    # จอกลางๆ -> รูปย่อมลงมาหน่อย (แต่ยังอยู่ซ้ายขวาได้!)
+    LAYOUT_MODE="DESKTOP_SMALL"
+    IMG_SIZE=28  # ขนาดรูปที่ลดลงเพื่อให้พอดีจอ
 else
+    # จอเล็กไป -> ไปแนวตั้ง
+    LAYOUT_MODE="MOBILE"
+fi
+
+if [ "$LAYOUT_MODE" != "MOBILE" ]; then
     # >>> DESKTOP MODE (Side-by-Side) <<<
     if command -v chafa &> /dev/null && [ -n "$IMG_PATH" ]; then
-        RAW_IMG=$(chafa "$IMG_PATH" --size "42x42")
+        RAW_IMG=$(chafa "$IMG_PATH" --size "${IMG_SIZE}x${IMG_SIZE}")
     else
         RAW_IMG=""
     fi
@@ -97,9 +95,22 @@ else
     echo "$RAW_IMG"
     tput cuu "$((IMG_H - 1))" 
     
-    OFFSET=$((IMG_WIDTH + PADDING))
+    # คำนวณ Offset ตามขนาดรูปจริง
+    OFFSET=$((IMG_SIZE + PADDING))
     p() { tput cuf "$OFFSET"; echo -e "$1"; }
     PAD=$OFFSET; BAR_MAX=30
+
+else
+    # >>> MOBILE MODE (Vertical) <<<
+    if command -v chafa &> /dev/null && [ -n "$IMG_PATH" ]; then
+        IMG_SAFE_W=$((TERM_COLS - 4))
+        [ $IMG_SAFE_W -gt 40 ] && IMG_SAFE_W=40
+        chafa "$IMG_PATH" --size "${IMG_SAFE_W}x20" --align center
+    fi
+    echo "" 
+    p() { echo -e " $1"; }
+    PAD=0; BAR_MAX=$TERM_COLS
+    IMG_H=20 # ค่าสมมติสำหรับ cleanup
 fi
 
 # =========================
@@ -127,7 +138,7 @@ p ""
 draw_loading_bar "$PAD" "$BAR_MAX"
 
 # Cleanup cursor position
-if [ "$TERM_COLS" -ge 105 ]; then
+if [ "$LAYOUT_MODE" != "MOBILE" ]; then
     USED_LINES=18
     REM=$((IMG_H - USED_LINES))
     if [ $REM -gt 0 ]; then
