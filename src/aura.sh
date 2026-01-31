@@ -1,5 +1,5 @@
 #!/bin/bash
-# Aura-c-fetch Core Script (Overlay Fix)
+# Aura-c-fetch Core Script (Horizontal Resize Fix)
 # Author: Oatsadawut Phansalee (MyName-Chet)
 
 # --- CONFIGURATION ---
@@ -62,13 +62,19 @@ draw_loading_bar() {
     echo -e "\e[1;32m${FULL_BLOCK} READY\e[0m"
 }
 
-# --- SMART LAYOUT CALCULATION ---
-# เช็คความยาวสูงสุดของ Text (เพื่อดูว่าจะชนรูปไหม)
-LONGEST_LINE=50 # ประมาณการคร่าวๆ
-REQUIRED_WIDTH=$(( 42 + LONGEST_LINE + 2 )) # รูปกว้าง 42 + ข้อความ + ช่องว่าง
+# --- SMART LAYOUT CALCULATION (แก้จุดบั๊กตรงนี้) ---
+# 1. คำนวณความยาวของข้อความที่ยาวที่สุด (CPU/GPU มักจะยาวสุด)
+# ผมเผื่อไว้ 60 ตัวอักษร เพราะชื่อ CPU Intel Gen 13 มันยาว
+MAX_TEXT_LEN=60 
+IMG_WIDTH=42
+PADDING=4
 
-# ถ้าจอเล็กกว่าความต้องการ หรือเล็กกว่า 90 ช่อง -> บังคับ Mobile Mode
-if [ "$TERM_COLS" -lt "$REQUIRED_WIDTH" ] || [ "$TERM_COLS" -lt 90 ]; then
+# 2. พื้นที่ที่ต้องใช้ทั้งหมด (Required Space)
+REQUIRED_WIDTH=$(( IMG_WIDTH + MAX_TEXT_LEN + PADDING ))
+
+# 3. เงื่อนไขการตัดสินใจ (Decision Logic)
+# ถ้าจอเล็กกว่าที่ต้องการ หรือ เล็กกว่า 100 ช่อง -> บังคับ Mobile Mode ทันที
+if [ "$TERM_COLS" -lt "$REQUIRED_WIDTH" ] || [ "$TERM_COLS" -lt 105 ]; then
     # >>> MOBILE MODE (Vertical) <<<
     # วาดรูปไว้บน (ลดขนาดรูปลงหน่อยเพื่อให้พอดี)
     if command -v chafa &> /dev/null && [ -n "$IMG_PATH" ]; then
@@ -91,7 +97,7 @@ else
     echo "$RAW_IMG"
     tput cuu "$((IMG_H - 1))" 
     
-    OFFSET=46 # 42 (รูป) + 4 (padding)
+    OFFSET=$((IMG_WIDTH + PADDING))
     p() { tput cuf "$OFFSET"; echo -e "$1"; }
     PAD=$OFFSET; BAR_MAX=30
 fi
@@ -121,7 +127,7 @@ p ""
 draw_loading_bar "$PAD" "$BAR_MAX"
 
 # Cleanup cursor position
-if [ "$TERM_COLS" -ge 90 ]; then
+if [ "$TERM_COLS" -ge 105 ]; then
     USED_LINES=18
     REM=$((IMG_H - USED_LINES))
     if [ $REM -gt 0 ]; then
