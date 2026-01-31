@@ -26,6 +26,10 @@ Aura-c-fetch is a high-performance, responsive system fetch tool designed for Li
     ```bash
     aura
 
+<p align="center">
+  <img src="assets/preview.png" alt="Aura Preview" width="600">
+</p>
+
 ## 🗑️ Uninstallation
 
 1. To remove the tool and clean up system files
