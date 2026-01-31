@@ -1,0 +1,12 @@
+# ของเสียจากระบบ
+.DS_Store
+*.swp
+*~
+
+# ไฟล์ Log
+*.log
+npm-debug.log*
+
+# โฟลเดอร์ที่ไม่ต้องการ (ถ้ามี)
+node_modules/
+dist/
