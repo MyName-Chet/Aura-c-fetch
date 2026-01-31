@@ -14,7 +14,7 @@ Aura-c-fetch is a high-performance, responsive system fetch tool designed for Li
 
 1. Clone the repository
    ```bash
-   git clone [https://github.com/myname-chet/Aura-c-fetch.git](https://github.com/myname-chet/Aura-c-fetch.git)
+   git clone https://github.com/myname-chet/Aura-c-fetch.git
    cd Aura-c-fetch
 
 2. Run the installer (Supports Ubuntu/Debian, Arch, Fedora)
