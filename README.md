@@ -1,4 +1,4 @@
-# Aura-c-fetch 🐧
+# Aura-c-fetch 🐧 
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black) ![Bash](https://img.shields.io/badge/Bash-4EAA25?style=for-the-badge&logo=gnu-bash&logoColor=white)
 
 Aura-c-fetch is a high-performance, responsive system fetch tool designed for Linux. It features dynamic image resizing, cyberpunk-style loading animations, and smart hardware detection.
